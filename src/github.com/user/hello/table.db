@@ -1,0 +1,8 @@
+create database speechdb;
+
+CREATE TABLE speech (
+    sparkid VARCHAR(1024) NOT NULL, 
+    mobile VARCHAR(100) NOT NULL,  
+    search VARCHAR(1024) NOT NULL,  
+    PRIMARY KEY (sparkid, mobile,search)
+);
