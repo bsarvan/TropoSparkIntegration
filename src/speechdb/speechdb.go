@@ -77,4 +77,48 @@ func Storerecord(sparkid string, mobile string, search string) (status bool) {
         return false
 }
 
+//To verify whether search phrase already exist
+func Verifysearch(search string) (value string) {
+    con, err := sql.Open("mysql", DBSettings.Username+":"+DBSettings.Password+"@tcp("+DBSettings.Host+":3306)/"+DBSettings.DB)
+    if err != nil {
+        log.Println(err)
+    }
+    rows, err := con.Query("SELECT search FROM speech where search=?", search)
+    if err == nil {
+        for rows.Next() {
+            var search string
+            err = rows.Scan(&search)
+            if err == nil {
+                log.Println("Verifysearch:-", search)
+                return search
+            }
+        }
+    }
+    log.Println("Verifysearch:-", search)
+    return ""
 
+}
+
+
+//To verify whether sparkID already exist
+func Verifysparkid(sparkid string) (search string, mobile string) {
+    con, err := sql.Open("mysql", DBSettings.Username+":"+DBSettings.Password+"@tcp("+DBSettings.Host+":3306)/"+DBSettings.DB)
+    if err != nil {
+        log.Println(err)
+    }
+    rows, err := con.Query("SELECT search,mobile FROM speech where sparkid=?", sparkid)
+    if err == nil {
+        for rows.Next() {
+            var search string
+            var mobile string
+            err = rows.Scan(&search, &mobile)
+            if err == nil {
+                log.Println("Verifysparkid:-", search)
+                return search, mobile
+            }
+        }
+    }
+    log.Println("Verifysparkid:-", sparkid)
+    return "", ""
+
+}

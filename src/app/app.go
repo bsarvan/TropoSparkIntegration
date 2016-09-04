@@ -10,7 +10,9 @@ import (
   "os/exec"	
   "fmt"
   "io"
+  . "spark"
   . "gspeechimpl"
+  "strings"
 )
 
 type templatedata struct {
@@ -25,7 +27,11 @@ func init() {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
-    t, _ := template.ParseFiles("f1.html")
+    t,err := template.ParseFiles("src/f1.html")
+    if err!=nil {
+	http.Error(w,err.Error(),http.StatusInternalServerError)
+	return
+    }
     t.Execute(w,nil)
 }
 
@@ -36,17 +42,32 @@ func dummy() (status bool) {
 func sparkadd(w http.ResponseWriter, r *http.Request) {
     log.Println("SparkID to be added", r.FormValue("sparkid"))
     log.Println("Mobile to be added", r.FormValue("mobile"))
+    search, mobile := Verifysparkid(r.FormValue("sparkid"))
     var A1 templatedata 
-    returnvalue := dummy() 
-    if returnvalue == false {
-        log.Println("In Here")
-        t, _ := template.ParseFiles("f2.html")
+   
+    if search != "" {
+        log.Println("sparkadd:- mobile, form", mobile, r.FormValue("mobile"))
+        //Spark ID already exist - Verify mobile number matches
+        if mobile != r.FormValue("mobile") {
+            t,_ := template.ParseFiles("src/invalidmobile.html")
+            t.Execute(w, A1)
+        } else {
+            t, _ := template.ParseFiles("src/f2.html")
+            A1.Sparkid = r.FormValue("sparkid")
+            A1.Mobile = r.FormValue("mobile")
+            A1.Search = "1234"
+            t.Execute(w, A1)
+        }
+    } else {
+        //New Spark ID to be added
+        t, _ := template.ParseFiles("src/f2a.html")
         A1.Sparkid = r.FormValue("sparkid")
         A1.Mobile = r.FormValue("mobile")
         A1.Search = "1234"
-        t.Execute(w, A1) 
+        t.Execute(w, A1)
     }
-    
+
+    log.Println("Selected spardid to be added", r.FormValue("sparkid")) 
 }
 
 func Uploadfile(w http.ResponseWriter, r *http.Request) {
@@ -79,13 +100,34 @@ func Uploadfile(w http.ResponseWriter, r *http.Request) {
     log.Println(string(SoxOut))
     output := Processflac("/home/ec2-user/GoLang/wav/" + handler.Filename + ".flac")
     log.Println("Processed string ", output)
-    
-return
+   
+    //Verify search string matches
+    //tospark := GlobalData[strings.ToLower(output)].Sparkid
+    //Send spark message
+    Sendspark("Voice Message - "+output, "bsarvan@cisco.com")
+     
+    return
 }
 
 func addmatch(w http.ResponseWriter, r *http.Request) {
     log.Println("NEW:- addmatch to be added", r.FormValue("search"))
     log.Println("NEW:- mobilenumber to be added", r.FormValue("Mobile"))
+	
+    if Verifysearch(r.FormValue("search")) == "" {
+        returnvalue := Storerecord(r.FormValue("sparkid"), r.FormValue("mobile"), r.FormValue("search"))
+        if returnvalue == true {
+            GlobalData[strings.ToLower(r.FormValue("search"))] = GlobalDS{append(GlobalData[r.FormValue("search")].Mobile, r.FormValue("mobile")), append(GlobalData[r.FormValue("search")].Sparkid, r.FormValue("sparkid"))}
+            t, _ := template.ParseFiles("src/f3.html")
+            t.Execute(w, nil)
+        } else {
+            t, _ := template.ParseFiles("src/error.html")
+            t.Execute(w, nil)
+        }
+        log.Println("selected room to be added", r.FormValue("search"))
+    } else {
+        t, _ := template.ParseFiles("src/duplicatesearch.html")
+        t.Execute(w, nil)
+    }
 
 }
 
